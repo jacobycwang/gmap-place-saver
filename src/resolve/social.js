@@ -200,7 +200,9 @@ function escapeRegex(text) {
 }
 
 export async function loadRegionEntries(config = loadConfig()) {
-  const data = JSON.parse(await fs.readFile(config.regionConfig, 'utf8'));
+  // config.regions lets a caller with no filesystem (the Cloudflare Worker,
+  // which keeps the mapping in KV) hand the mapping over directly.
+  const data = config.regions || JSON.parse(await fs.readFile(config.regionConfig, 'utf8'));
   return Object.entries(data).map(([listName, keywords]) => {
     const usable = (Array.isArray(keywords) ? keywords : []).map((k) => String(k).trim()).filter(Boolean);
     return {
@@ -320,7 +322,9 @@ export async function resolveSocial(sourceUrl, {
   config = loadConfig(),
   useCache = true,
   writeCache = true,
-  useYtDlp = true,
+  // config.useYtDlp = false is for hosts that cannot spawn a process (the
+  // Cloudflare Worker); captions then come from the page's meta tags alone.
+  useYtDlp = config.useYtDlp !== false,
 } = {}) {
   const startNs = process.hrtime.bigint();
   const elapsedMs = () => Math.round(Number(process.hrtime.bigint() - startNs) / 1e6);

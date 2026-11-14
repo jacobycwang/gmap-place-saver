@@ -28,6 +28,9 @@ export async function saveFailureArtifacts(page, {
   dir = loadConfig().failureDir,
   error = null,
 } = {}) {
+  // No directory means nowhere to write (the Cloudflare Worker passes none):
+  // report the error alone rather than let a failed mkdir mask it.
+  if (!dir) return { label, error: error ? String(error.message || error) : null };
   await fs.mkdir(dir, { recursive: true });
   const safeLabel = label.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 80) || 'failure';
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');

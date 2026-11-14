@@ -70,6 +70,13 @@ server password-protected, so other local users on a shared server cannot watch
 the login. Tool paths are overridable via env (`XVFB`, `X11VNC`, `NOVNC_PROXY`,
 `NODE_BIN`, `DISPLAY_NUM`, ports).
 
+## Run on Cloudflare (optional)
+
+`worker/` deploys the MCP server as a remote (Streamable HTTP) server on a
+Cloudflare Worker with Browser Rendering: `resolve_place`, `save_place`,
+`unsave_place`, `list_regions`, plus `session_status`. The Google session lives
+in KV instead of a profile directory. See [worker/README.md](worker/README.md).
+
 ## Configuration
 
 All paths and tuning come from environment variables (see `.env.example`). Nothing

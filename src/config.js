@@ -2,7 +2,12 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// A Cloudflare Worker bundle has no file: URL for its modules; there the
+// package root is meaningless and every path below is unused.
+function packageRoot() {
+  try { return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); } catch { return '/'; }
+}
+const PKG_ROOT = packageRoot();
 
 // Simple KEY=VALUE lines only: # comments, optional `export `, optional
 // single/double quotes. No multiline or interpolation — matches .env.example.
