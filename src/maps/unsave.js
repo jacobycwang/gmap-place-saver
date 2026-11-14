@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { launchProfileContext } from '../browser.js';
 import { loadConfig } from '../config.js';
 import { runWithRetry, saveFailureArtifacts } from '../run-utils.js';
 import {
-  detailActionSelectors, withMapsLanguage, clickFirst, getBody, waitForAny, placeFound, signInRequired, isMissingBrowserError,
+  detailActionSelectors, withMapsLanguage, clickFirst, getBody, waitForAny, placeFound, signInRequired,
 } from './save.js';
 import { waitForBodyIncludes } from './maps-ui.js';
 
@@ -40,8 +40,7 @@ export async function unsavePlace({
   listName,
   expectedName,
   expectedAddress = '',
-} = {}, { config = loadConfig() } = {}) {
-  if (!config.profile) throw new Error('GOOGLE_MAPS_PROFILE not set');
+} = {}, { config = loadConfig(), openContext = launchProfileContext } = {}) {
   if (!placeUrl) throw new Error('unsavePlace requires placeUrl');
   if (!listName) throw new Error('unsavePlace requires listName');
   if (!expectedName) throw new Error('unsavePlace requires expectedName');
@@ -49,20 +48,7 @@ export async function unsavePlace({
   const startNs = process.hrtime.bigint();
   const elapsedMs = () => Math.round(Number(process.hrtime.bigint() - startNs) / 1e6);
 
-  let context;
-  try {
-    context = await chromium.launchPersistentContext(config.profile, {
-      headless: config.headless,
-      viewport: { width: 1366, height: 900 },
-      locale: 'zh-TW',
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=zh-TW', '--window-size=1366,900'],
-    });
-  } catch (error) {
-    if (isMissingBrowserError(error)) {
-      throw new Error(`Playwright Chromium is not installed. Run: npx playwright install chromium\n(${error.message})`);
-    }
-    throw error;
-  }
+  const context = await openContext(config);
   let page = null;
   try {
     page = context.pages()[0] || await context.newPage();

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { launchProfileContext } from '../browser.js';
 import { loadConfig } from '../config.js';
 import { runWithRetry, saveFailureArtifacts } from '../run-utils.js';
 import { loadRegionEntries, mapsSearchUrl, matchTargetLists } from './social.js';
@@ -152,19 +152,15 @@ async function saveCache(cachePath, cache) {
   await writeJsonAtomic(cachePath, cache);
 }
 
-function isMissingBrowserError(error) {
-  return /Executable doesn'?t exist|playwright install|please run the following command/i.test(error?.message || '');
-}
-
 export async function resolveCandidate({ query = '', placeUrl = '', sourceUrl = '' } = {}, {
   config = loadConfig(),
   useCache = true,
   writeCache = true,
+  openContext = launchProfileContext,
 } = {}) {
   const placeQuery = query;
   sourceUrl = sourceUrl || placeUrl || placeQuery;
   if (!placeQuery && !placeUrl) throw new Error('resolveCandidate requires query or placeUrl');
-  if (!config.profile) throw new Error('GOOGLE_MAPS_PROFILE not set');
 
   const startNs = process.hrtime.bigint();
   const marks = [];
@@ -186,20 +182,7 @@ export async function resolveCandidate({ query = '', placeUrl = '', sourceUrl = 
     }
   }
 
-  let context;
-  try {
-    context = await chromium.launchPersistentContext(config.profile, {
-      headless: config.headless,
-      viewport: { width: 1366, height: 900 },
-      locale: 'zh-TW',
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=zh-TW', '--window-size=1366,900'],
-    });
-  } catch (error) {
-    if (isMissingBrowserError(error)) {
-      throw new Error(`Playwright Chromium is not installed. Run: npx playwright install chromium\n(${error.message})`);
-    }
-    throw error;
-  }
+  const context = await openContext(config);
 
   let page = null;
   try {

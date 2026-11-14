@@ -1,0 +1,19 @@
+{
+  "name": "gmap-place-saver-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run --outdir dist",
+    "test": "node --test test/*.test.js",
+    "push-state": "wrangler kv key put storage-state --path ../google-state.json --binding GMAP_KV --remote",
+    "push-regions": "wrangler kv key put regions --path ../config/region-lists.json --binding GMAP_KV --remote"
+  },
+  "dependencies": {
+    "@cloudflare/playwright": "^1.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.162.0"
+  }
+}

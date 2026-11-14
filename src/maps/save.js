@@ -1,10 +1,12 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { launchProfileContext, isMissingBrowserError } from '../browser.js';
 import { loadConfig } from '../config.js';
 import { runWithRetry, saveFailureArtifacts } from '../run-utils.js';
 import { waitForBodyIncludes } from './maps-ui.js';
 import { appendBenchmark } from '../storage/benchmark.js';
+
+export { isMissingBrowserError };
 
 export const detailActionSelectors = [
   'button[aria-label^="儲存"]',
@@ -122,10 +124,6 @@ export function signInRequired({ url = '', signInControlVisible = false } = {}) 
   return Boolean(signInControlVisible) || /^https:\/\/accounts\.google\.com\//.test(url);
 }
 
-export function isMissingBrowserError(error) {
-  return /Executable doesn'?t exist|playwright install|please run the following command/i.test(error?.message || '');
-}
-
 // An empty expectedName must fail explicitly: body.includes('') is always
 // true, which would silently disable the confirmation check for URL-only saves.
 export function placeFound(body, expectedName, expectedAddress = '') {
@@ -185,8 +183,7 @@ export async function savePlace({
   expectedName,
   expectedAddress = '',
   dryRun = false,
-} = {}, { config = loadConfig() } = {}) {
-  if (!config.profile) throw new Error('GOOGLE_MAPS_PROFILE not set');
+} = {}, { config = loadConfig(), openContext = launchProfileContext } = {}) {
   if (!dryRun && !listName) throw new Error('listName is required for save');
   // Without either one there is nothing to open: the run used to search Maps
   // for the empty string and then fail on whatever locator the blank page
@@ -203,20 +200,7 @@ export async function savePlace({
   const elapsedMs = () => Math.round(Number(process.hrtime.bigint() - startNs) / 1e6);
   const mark = (phase) => marks.push({ phase, ms: elapsedMs() });
 
-  let context;
-  try {
-    context = await chromium.launchPersistentContext(config.profile, {
-      headless: config.headless,
-      viewport: { width: 1366, height: 900 },
-      locale: 'zh-TW',
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=zh-TW', '--window-size=1366,900'],
-    });
-  } catch (error) {
-    if (isMissingBrowserError(error)) {
-      throw new Error(`Playwright Chromium is not installed. Run: npx playwright install chromium\n(${error.message})`);
-    }
-    throw error;
-  }
+  const context = await openContext(config);
 
   let page = null;
   try {

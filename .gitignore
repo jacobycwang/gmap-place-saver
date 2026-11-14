@@ -13,3 +13,9 @@ users/
 # local business research — this repo is public and these are competitor
 # analysis and monetization notes, so they stay out of it deliberately
 docs/research/
+# exported Google session for the Cloudflare Worker (scripts/export-state.js)
+google-state.json
+worker/node_modules/
+worker/dist/
+worker/.dev.vars
+worker/.wrangler/
